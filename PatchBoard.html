@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PatchBoard</title>
+<meta name="author" content="Jolan">
+<meta name="description" content="PatchBoard — Zero-install HTML dashboard for EPO and WSUS CSV report consolidation. No server, no dependencies.">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#1e2d44;--surface:#273d58;--card:#223352;--border:#365470;
+  --text:#e0eaf8;--muted:#8fb5d4;--dim:#4d7a9a;--accent:#3b82f6;
+  --mono:'Consolas','Fira Code','Courier New',monospace;
+  --sans:'Segoe UI','Helvetica Neue',Arial,sans-serif;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
+#app{padding:20px 24px;}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;}
+.header-left{display:flex;flex-direction:column;gap:4px;}
+.title-row{display:flex;align-items:center;gap:10px;}
+.bars{display:flex;gap:3px;}
+.bar{width:3px;height:22px;border-radius:2px;}
+h1{font-family:var(--mono);font-size:18px;font-weight:700;color:#f8fafc;letter-spacing:-0.01em;}
+.sub{margin-left:22px;color:var(--muted);font-size:11px;}
+.btn-reset{background:transparent;color:var(--muted);border:1px solid var(--border);
+  padding:5px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-family:var(--sans);}
+.btn-reset:hover{color:var(--text);border-color:var(--dim);}
+.dropzone{border:1px dashed var(--border);border-radius:8px;padding:28px;text-align:center;
+  margin-bottom:16px;cursor:pointer;transition:border-color .15s,background .15s;user-select:none;}
+.dropzone:hover,.dropzone.over{border-color:var(--accent);background:#182f4a;}
+.dropzone p{color:var(--muted);font-size:13px;line-height:2;}
+.dropzone code{font-family:var(--mono);font-size:10px;color:var(--dim);}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:18px;}
+.chip{border-radius:4px;padding:3px 9px;font-size:11px;font-family:var(--mono);color:var(--muted);}
+.chip-wsus{background:var(--card);border:1px solid #1d4ed8;}
+.chip-epo{background:var(--card);border:1px solid #166534;}
+.chip-err{background:#420d0d;border:1px solid #7f1d1d;color:#f87171;}
+.tw{color:#60a5fa;font-weight:700;}
+.te{color:#4ade80;font-weight:700;}
+.tn{color:var(--dim);}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.kpi{background:var(--card);border-radius:6px;padding:14px 16px;border:1px solid var(--border);}
+.kpi-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+.kpi-value{font-size:28px;font-weight:700;font-family:var(--mono);margin-top:5px;}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+.filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
+.filters select{background:var(--card);border:1px solid var(--border);color:var(--text);
+  padding:6px 10px;border-radius:5px;font-size:12px;font-family:var(--sans);outline:none;cursor:pointer;}
+#search-input{background:var(--card);border:1px solid var(--border);color:var(--text);
+  padding:6px 10px;border-radius:5px;font-size:12px;font-family:var(--sans);outline:none;
+  flex:1;min-width:220px;}
+#search-input::placeholder{color:var(--muted);}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:12px;}
+.tab{background:none;border:none;padding:8px 16px;cursor:pointer;font-size:12px;
+  font-family:var(--sans);font-weight:400;color:var(--muted);
+  border-bottom:2px solid transparent;transition:color .1s;}
+.tab.ta{color:#ef4444;border-bottom-color:#ef4444;font-weight:700;}
+.tab.tw{color:#60a5fa;border-bottom-color:#60a5fa;font-weight:700;}
+.tab.te{color:#4ade80;border-bottom-color:#4ade80;font-weight:700;}
+.tc{padding:0 5px;border-radius:3px;font-family:var(--mono);font-size:11px;}
+.wrap{overflow-x:auto;border-radius:6px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{padding:9px 12px;text-align:left;color:var(--muted);font-family:var(--sans);
+  font-weight:600;border-bottom:1px solid var(--border);font-size:11px;
+  text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;
+  background:var(--surface);position:sticky;top:0;z-index:1;}
+thead th.th-wsus{border-top:2px solid #1d4ed855;color:#60a5fa88;}
+thead th.th-epo{border-top:2px solid #16653455;color:#4ade8088;}
+tbody tr:nth-child(even){background:var(--surface);}
+tbody tr:nth-child(odd){background:var(--bg);}
+tbody tr:hover{background:#182d43;}
+td{padding:7px 12px;border-bottom:1px solid #2a3f5c;vertical-align:middle;}
+.bdg{padding:1px 7px;border-radius:3px;font-weight:700;font-size:11px;font-family:var(--mono);}
+.bs-w{background:#0c1f3d;color:#60a5fa;border:1px solid #1d4ed8;}
+.bs-e{background:#052e16;color:#4ade80;border:1px solid #166534;}
+.bst-ok {background:#052e16;color:#4ade80;border:1px solid #166534;}
+.bst-nok{background:#2d1f00;color:#fbbf24;border:1px solid #92400e;}
+.bst-ko {background:#2d0000;color:#f87171;border:1px solid #7f1d1d;}
+.bst-nd {background:#1e2d44;color:#6b90ae;border:1px solid #2d4a63;}
+.n0{color:var(--dim);font-family:var(--mono);}
+.ni{background:#2d1f00;color:#fbbf24;border:1px solid #92400e;}
+.nc{background:#2d0000;color:#f87171;border:1px solid #7f1d1d;}
+.ns{background:#2d1200;color:#fb923c;border:1px solid #7c2d12;}
+.nf{background:#1e0d2e;color:#c084fc;border:1px solid #4c1d95;}
+.np{background:#001a2d;color:#38bdf8;border:1px solid #0c4a6e;}
+/* pastille source dans table anomalies */
+.src{display:flex;gap:3px;flex-wrap:wrap;}
+.src-w{background:#0c1f3d;color:#60a5fa;border:1px solid #1d4ed8;padding:0 5px;border-radius:3px;font-size:10px;font-family:var(--mono);font-weight:700;}
+.src-e{background:#1a0a2e;color:#c084fc;border:1px solid #4c1d95;padding:0 5px;border-radius:3px;font-size:10px;font-family:var(--mono);font-weight:700;}
+.mono{font-family:var(--mono);}
+.muted{color:var(--muted);}
+.dim{color:var(--dim);}
+.sm{font-size:11px;}
+.empty{text-align:center;padding:48px;color:var(--dim);font-size:13px;}
+.empty-state{text-align:center;margin-top:80px;color:var(--dim);font-size:13px;}
+.footer{margin-top:20px;text-align:right;color:var(--dim);font-size:10px;font-family:var(--mono);}
+.btn-mail{background:#1d4ed8;color:#fff;padding:4px 12px;border-radius:4px;
+  text-decoration:none;font-size:11px;font-weight:600;white-space:nowrap;
+  font-family:var(--sans);display:inline-block;}
+.btn-mail:hover{background:#2563eb;}
+/* séparateur de groupe de colonnes */
+.col-sep{border-left:1px solid #1f2937 !important;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* @license
+Papa Parse
+v5.5.3
+https://github.com/mholt/PapaParse
+License: MIT
+*/
+((e,t)=>{"function"==typeof define&&define.amd?define([],t):"object"==typeof module&&"undefined"!=typeof exports?module.exports=t():e.Papa=t()})(this,function r(){var n="undefined"!=typeof self?self:"undefined"!=typeof window?window:void 0!==n?n:{};var d,s=!n.document&&!!n.postMessage,a=n.IS_PAPA_WORKER||!1,o={},h=0,v={};function u(e){this._handle=null,this._finished=!1,this._completed=!1,this._halted=!1,this._input=null,this._baseIndex=0,this._partialLine="",this._rowCount=0,this._start=0,this._nextChunk=null,this.isFirstChunk=!0,this._completeResults={data:[],errors:[],meta:{}},function(e){var t=b(e);t.chunkSize=parseInt(t.chunkSize),e.step||e.chunk||(t.chunkSize=null);this._handle=new i(t),(this._handle.streamer=this)._config=t}.call(this,e),this.parseChunk=function(t,e){var i=parseInt(this._config.skipFirstNLines)||0;if(this.isFirstChunk&&0<i){let e=this._config.newline;e||(r=this._config.quoteChar||'"',e=this._handle.guessLineEndings(t,r)),t=[...t.split(e).slice(i)].join(e)}this.isFirstChunk&&U(this._config.beforeFirstChunk)&&void 0!==(r=this._config.beforeFirstChunk(t))&&(t=r),this.isFirstChunk=!1,this._halted=!1;var i=this._partialLine+t,r=(this._partialLine="",this._handle.parse(i,this._baseIndex,!this._finished));if(!this._handle.paused()&&!this._handle.aborted()){t=r.meta.cursor,i=(this._finished||(this._partialLine=i.substring(t-this._baseIndex),this._baseIndex=t),r&&r.data&&(this._rowCount+=r.data.length),this._finished||this._config.preview&&this._rowCount>=this._config.preview);if(a)n.postMessage({results:r,workerId:v.WORKER_ID,finished:i});else if(U(this._config.chunk)&&!e){if(this._config.chunk(r,this._handle),this._handle.paused()||this._handle.aborted())return void(this._halted=!0);this._completeResults=r=void 0}return this._config.step||this._config.chunk||(this._completeResults.data=this._completeResults.data.concat(r.data),this._completeResults.errors=this._completeResults.errors.concat(r.errors),this._completeResults.meta=r.meta),this._completed||!i||!U(this._config.complete)||r&&r.meta.aborted||(this._config.complete(this._completeResults,this._input),this._completed=!0),i||r&&r.meta.paused||this._nextChunk(),r}this._halted=!0},this._sendError=function(e){U(this._config.error)?this._config.error(e):a&&this._config.error&&n.postMessage({workerId:v.WORKER_ID,error:e,finished:!1})}}function f(e){var r;(e=e||{}).chunkSize||(e.chunkSize=v.RemoteChunkSize),u.call(this,e),this._nextChunk=s?function(){this._readChunk(),this._chunkLoaded()}:function(){this._readChunk()},this.stream=function(e){this._input=e,this._nextChunk()},this._readChunk=function(){if(this._finished)this._chunkLoaded();else{if(r=new XMLHttpRequest,this._config.withCredentials&&(r.withCredentials=this._config.withCredentials),s||(r.onload=y(this._chunkLoaded,this),r.onerror=y(this._chunkError,this)),r.open(this._config.downloadRequestBody?"POST":"GET",this._input,!s),this._config.downloadRequestHeaders){var e,t=this._config.downloadRequestHeaders;for(e in t)r.setRequestHeader(e,t[e])}var i;this._config.chunkSize&&(i=this._start+this._config.chunkSize-1,r.setRequestHeader("Range","bytes="+this._start+"-"+i));try{r.send(this._config.downloadRequestBody)}catch(e){this._chunkError(e.message)}s&&0===r.status&&this._chunkError()}},this._chunkLoaded=function(){4===r.readyState&&(r.status<200||400<=r.status?this._chunkError():(this._start+=this._config.chunkSize||r.responseText.length,this._finished=!this._config.chunkSize||this._start>=(e=>null!==(e=e.getResponseHeader("Content-Range"))?parseInt(e.substring(e.lastIndexOf("/")+1)):-1)(r),this.parseChunk(r.responseText)))},this._chunkError=function(e){e=r.statusText||e;this._sendError(new Error(e))}}function l(e){(e=e||{}).chunkSize||(e.chunkSize=v.LocalChunkSize),u.call(this,e);var i,r,n="undefined"!=typeof FileReader;this.stream=function(e){this._input=e,r=e.slice||e.webkitSlice||e.mozSlice,n?((i=new FileReader).onload=y(this._chunkLoaded,this),i.onerror=y(this._chunkError,this)):i=new FileReaderSync,this._nextChunk()},this._nextChunk=function(){this._finished||this._config.preview&&!(this._rowCount<this._config.preview)||this._readChunk()},this._readChunk=function(){var e=this._input,t=(this._config.chunkSize&&(t=Math.min(this._start+this._config.chunkSize,this._input.size),e=r.call(e,this._start,t)),i.readAsText(e,this._config.encoding));n||this._chunkLoaded({target:{result:t}})},this._chunkLoaded=function(e){this._start+=this._config.chunkSize,this._finished=!this._config.chunkSize||this._start>=this._input.size,this.parseChunk(e.target.result)},this._chunkError=function(){this._sendError(i.error)}}function c(e){var i;u.call(this,e=e||{}),this.stream=function(e){return i=e,this._nextChunk()},this._nextChunk=function(){var e,t;if(!this._finished)return e=this._config.chunkSize,i=e?(t=i.substring(0,e),i.substring(e)):(t=i,""),this._finished=!i,this.parseChunk(t)}}function p(e){u.call(this,e=e||{});var t=[],i=!0,r=!1;this.pause=function(){u.prototype.pause.apply(this,arguments),this._input.pause()},this.resume=function(){u.prototype.resume.apply(this,arguments),this._input.resume()},this.stream=function(e){this._input=e,this._input.on("data",this._streamData),this._input.on("end",this._streamEnd),this._input.on("error",this._streamError)},this._checkIsFinished=function(){r&&1===t.length&&(this._finished=!0)},this._nextChunk=function(){this._checkIsFinished(),t.length?this.parseChunk(t.shift()):i=!0},this._streamData=y(function(e){try{t.push("string"==typeof e?e:e.toString(this._config.encoding)),i&&(i=!1,this._checkIsFinished(),this.parseChunk(t.shift()))}catch(e){this._streamError(e)}},this),this._streamError=y(function(e){this._streamCleanUp(),this._sendError(e)},this),this._streamEnd=y(function(){this._streamCleanUp(),r=!0,this._streamData("")},this),this._streamCleanUp=y(function(){this._input.removeListener("data",this._streamData),this._input.removeListener("end",this._streamEnd),this._input.removeListener("error",this._streamError)},this)}function i(m){var n,s,a,t,o=Math.pow(2,53),h=-o,u=/^\s*-?(\d+\.?|\.\d+|\d+\.\d+)([eE][-+]?\d+)?\s*$/,d=/^((\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z))|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d([+-][0-2]\d:[0-5]\d|Z))|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d([+-][0-2]\d:[0-5]\d|Z)))$/,i=this,r=0,f=0,l=!1,e=!1,c=[],p={data:[],errors:[],meta:{}};function y(e){return"greedy"===m.skipEmptyLines?""===e.join("").trim():1===e.length&&0===e[0].length}function g(){if(p&&a&&(k("Delimiter","UndetectableDelimiter","Unable to auto-detect delimiting character; defaulted to '"+v.DefaultDelimiter+"'"),a=!1),m.skipEmptyLines&&(p.data=p.data.filter(function(e){return!y(e)})),_()){if(p)if(Array.isArray(p.data[0])){for(var e=0;_()&&e<p.data.length;e++)p.data[e].forEach(t);p.data.splice(0,1)}else p.data.forEach(t);function t(e,t){U(m.transformHeader)&&(e=m.transformHeader(e,t)),c.push(e)}}function i(e,t){for(var i=m.header?{}:[],r=0;r<e.length;r++){var n=r,s=e[r],s=((e,t)=>(e=>(m.dynamicTypingFunction&&void 0===m.dynamicTyping[e]&&(m.dynamicTyping[e]=m.dynamicTypingFunction(e)),!0===(m.dynamicTyping[e]||m.dynamicTyping)))(e)?"true"===t||"TRUE"===t||"false"!==t&&"FALSE"!==t&&((e=>{if(u.test(e)){e=parseFloat(e);if(h<e&&e<o)return 1}})(t)?parseFloat(t):d.test(t)?new Date(t):""===t?null:t):t)(n=m.header?r>=c.length?"__parsed_extra":c[r]:n,s=m.transform?m.transform(s,n):s);"__parsed_extra"===n?(i[n]=i[n]||[],i[n].push(s)):i[n]=s}return m.header&&(r>c.length?k("FieldMismatch","TooManyFields","Too many fields: expected "+c.length+" fields but parsed "+r,f+t):r<c.length&&k("FieldMismatch","TooFewFields","Too few fields: expected "+c.length+" fields but parsed "+r,f+t)),i}var r;p&&(m.header||m.dynamicTyping||m.transform)&&(r=1,!p.data.length||Array.isArray(p.data[0])?(p.data=p.data.map(i),r=p.data.length):p.data=i(p.data,0),m.header&&p.meta&&(p.meta.fields=c),f+=r)}function _(){return m.header&&0===c.length}function k(e,t,i,r){e={type:e,code:t,message:i};void 0!==r&&(e.row=r),p.errors.push(e)}U(m.step)&&(t=m.step,m.step=function(e){p=e,_()?g():(g(),0!==p.data.length&&(r+=e.data.length,m.preview&&r>m.preview?s.abort():(p.data=p.data[0],t(p,i))))}),this.parse=function(e,t,i){var r=m.quoteChar||'"',r=(m.newline||(m.newline=this.guessLineEndings(e,r)),a=!1,m.delimiter?U(m.delimiter)&&(m.delimiter=m.delimiter(e),p.meta.delimiter=m.delimiter):((r=((e,t,i,r,n)=>{var s,a,o,h;n=n||[",","\t","|",";",v.RECORD_SEP,v.UNIT_SEP];for(var u=0;u<n.length;u++){for(var d,f=n[u],l=0,c=0,p=0,g=(o=void 0,new E({comments:r,delimiter:f,newline:t,preview:10}).parse(e)),_=0;_<g.data.length;_++)i&&y(g.data[_])?p++:(d=g.data[_].length,c+=d,void 0===o?o=d:0<d&&(l+=Math.abs(d-o),o=d));0<g.data.length&&(c/=g.data.length-p),(void 0===a||l<=a)&&(void 0===h||h<c)&&1.99<c&&(a=l,s=f,h=c)}return{successful:!!(m.delimiter=s),bestDelimiter:s}})(e,m.newline,m.skipEmptyLines,m.comments,m.delimitersToGuess)).successful?m.delimiter=r.bestDelimiter:(a=!0,m.delimiter=v.DefaultDelimiter),p.meta.delimiter=m.delimiter),b(m));return m.preview&&m.header&&r.preview++,n=e,s=new E(r),p=s.parse(n,t,i),g(),l?{meta:{paused:!0}}:p||{meta:{paused:!1}}},this.paused=function(){return l},this.pause=function(){l=!0,s.abort(),n=U(m.chunk)?"":n.substring(s.getCharIndex())},this.resume=function(){i.streamer._halted?(l=!1,i.streamer.parseChunk(n,!0)):setTimeout(i.resume,3)},this.aborted=function(){return e},this.abort=function(){e=!0,s.abort(),p.meta.aborted=!0,U(m.complete)&&m.complete(p),n=""},this.guessLineEndings=function(e,t){e=e.substring(0,1048576);var t=new RegExp(P(t)+"([^]*?)"+P(t),"gm"),i=(e=e.replace(t,"")).split("\r"),t=e.split("\n"),e=1<t.length&&t[0].length<i[0].length;if(1===i.length||e)return"\n";for(var r=0,n=0;n<i.length;n++)"\n"===i[n][0]&&r++;return r>=i.length/2?"\r\n":"\r"}}function P(e){return e.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}function E(C){var S=(C=C||{}).delimiter,O=C.newline,x=C.comments,I=C.step,A=C.preview,T=C.fastMode,D=null,L=!1,F=null==C.quoteChar?'"':C.quoteChar,j=F;if(void 0!==C.escapeChar&&(j=C.escapeChar),("string"!=typeof S||-1<v.BAD_DELIMITERS.indexOf(S))&&(S=","),x===S)throw new Error("Comment character same as delimiter");!0===x?x="#":("string"!=typeof x||-1<v.BAD_DELIMITERS.indexOf(x))&&(x=!1),"\n"!==O&&"\r"!==O&&"\r\n"!==O&&(O="\n");var z=0,M=!1;this.parse=function(i,t,r){if("string"!=typeof i)throw new Error("Input must be a string");var n=i.length,e=S.length,s=O.length,a=x.length,o=U(I),h=[],u=[],d=[],f=z=0;if(!i)return w();if(T||!1!==T&&-1===i.indexOf(F)){for(var l=i.split(O),c=0;c<l.length;c++){if(d=l[c],z+=d.length,c!==l.length-1)z+=O.length;else if(r)return w();if(!x||d.substring(0,a)!==x){if(o){if(h=[],k(d.split(S)),R(),M)return w()}else k(d.split(S));if(A&&A<=c)return h=h.slice(0,A),w(!0)}}return w()}for(var p=i.indexOf(S,z),g=i.indexOf(O,z),_=new RegExp(P(j)+P(F),"g"),m=i.indexOf(F,z);;)if(i[z]===F)for(m=z,z++;;){if(-1===(m=i.indexOf(F,m+1)))return r||u.push({type:"Quotes",code:"MissingQuotes",message:"Quoted field unterminated",row:h.length,index:z}),E();if(m===n-1)return E(i.substring(z,m).replace(_,F));if(F===j&&i[m+1]===j)m++;else if(F===j||0===m||i[m-1]!==j){-1!==p&&p<m+1&&(p=i.indexOf(S,m+1));var y=v(-1===(g=-1!==g&&g<m+1?i.indexOf(O,m+1):g)?p:Math.min(p,g));if(i.substr(m+1+y,e)===S){d.push(i.substring(z,m).replace(_,F)),i[z=m+1+y+e]!==F&&(m=i.indexOf(F,z)),p=i.indexOf(S,z),g=i.indexOf(O,z);break}y=v(g);if(i.substring(m+1+y,m+1+y+s)===O){if(d.push(i.substring(z,m).replace(_,F)),b(m+1+y+s),p=i.indexOf(S,z),m=i.indexOf(F,z),o&&(R(),M))return w();if(A&&h.length>=A)return w(!0);break}u.push({type:"Quotes",code:"InvalidQuotes",message:"Trailing quote on quoted field is malformed",row:h.length,index:z}),m++}}else if(x&&0===d.length&&i.substring(z,z+a)===x){if(-1===g)return w();z=g+s,g=i.indexOf(O,z),p=i.indexOf(S,z)}else if(-1!==p&&(p<g||-1===g))d.push(i.substring(z,p)),z=p+e,p=i.indexOf(S,z);else{if(-1===g)break;if(d.push(i.substring(z,g)),b(g+s),o&&(R(),M))return w();if(A&&h.length>=A)return w(!0)}return E();function k(e){h.push(e),f=z}function v(e){var t=0;return t=-1!==e&&(e=i.substring(m+1,e))&&""===e.trim()?e.length:t}function E(e){return r||(void 0===e&&(e=i.substring(z)),d.push(e),z=n,k(d),o&&R()),w()}function b(e){z=e,k(d),d=[],g=i.indexOf(O,z)}function w(e){if(C.header&&!t&&h.length&&!L){var s=h[0],a=Object.create(null),o=new Set(s);let n=!1;for(let r=0;r<s.length;r++){let i=s[r];if(a[i=U(C.transformHeader)?C.transformHeader(i,r):i]){let e,t=a[i];for(;e=i+"_"+t,t++,o.has(e););o.add(e),s[r]=e,a[i]++,n=!0,(D=null===D?{}:D)[e]=i}else a[i]=1,s[r]=i;o.add(i)}n&&console.warn("Duplicate headers found and renamed."),L=!0}return{data:h,errors:u,meta:{delimiter:S,linebreak:O,aborted:M,truncated:!!e,cursor:f+(t||0),renamedHeaders:D}}}function R(){I(w()),h=[],u=[]}},this.abort=function(){M=!0},this.getCharIndex=function(){return z}}function g(e){var t=e.data,i=o[t.workerId],r=!1;if(t.error)i.userError(t.error,t.file);else if(t.results&&t.results.data){var n={abort:function(){r=!0,_(t.workerId,{data:[],errors:[],meta:{aborted:!0}})},pause:m,resume:m};if(U(i.userStep)){for(var s=0;s<t.results.data.length&&(i.userStep({data:t.results.data[s],errors:t.results.errors,meta:t.results.meta},n),!r);s++);delete t.results}else U(i.userChunk)&&(i.userChunk(t.results,n,t.file),delete t.results)}t.finished&&!r&&_(t.workerId,t.results)}function _(e,t){var i=o[e];U(i.userComplete)&&i.userComplete(t),i.terminate(),delete o[e]}function m(){throw new Error("Not implemented.")}function b(e){if("object"!=typeof e||null===e)return e;var t,i=Array.isArray(e)?[]:{};for(t in e)i[t]=b(e[t]);return i}function y(e,t){return function(){e.apply(t,arguments)}}function U(e){return"function"==typeof e}return v.parse=function(e,t){var i=(t=t||{}).dynamicTyping||!1;U(i)&&(t.dynamicTypingFunction=i,i={});if(t.dynamicTyping=i,t.transform=!!U(t.transform)&&t.transform,!t.worker||!v.WORKERS_SUPPORTED)return i=null,v.NODE_STREAM_INPUT,"string"==typeof e?(e=(e=>65279!==e.charCodeAt(0)?e:e.slice(1))(e),i=new(t.download?f:c)(t)):!0===e.readable&&U(e.read)&&U(e.on)?i=new p(t):(n.File&&e instanceof File||e instanceof Object)&&(i=new l(t)),i.stream(e);(i=(()=>{var e;return!!v.WORKERS_SUPPORTED&&(e=(()=>{var e=n.URL||n.webkitURL||null,t=r.toString();return v.BLOB_URL||(v.BLOB_URL=e.createObjectURL(new Blob(["var global = (function() { if (typeof self !== 'undefined') { return self; } if (typeof window !== 'undefined') { return window; } if (typeof global !== 'undefined') { return global; } return {}; })(); global.IS_PAPA_WORKER=true; ","(",t,")();"],{type:"text/javascript"})))})(),(e=new n.Worker(e)).onmessage=g,e.id=h++,o[e.id]=e)})()).userStep=t.step,i.userChunk=t.chunk,i.userComplete=t.complete,i.userError=t.error,t.step=U(t.step),t.chunk=U(t.chunk),t.complete=U(t.complete),t.error=U(t.error),delete t.worker,i.postMessage({input:e,config:t,workerId:i.id})},v.unparse=function(e,t){var n=!1,_=!0,m=",",y="\r\n",s='"',a=s+s,i=!1,r=null,o=!1,h=((()=>{if("object"==typeof t){if("string"!=typeof t.delimiter||v.BAD_DELIMITERS.filter(function(e){return-1!==t.delimiter.indexOf(e)}).length||(m=t.delimiter),"boolean"!=typeof t.quotes&&"function"!=typeof t.quotes&&!Array.isArray(t.quotes)||(n=t.quotes),"boolean"!=typeof t.skipEmptyLines&&"string"!=typeof t.skipEmptyLines||(i=t.skipEmptyLines),"string"==typeof t.newline&&(y=t.newline),"string"==typeof t.quoteChar&&(s=t.quoteChar),"boolean"==typeof t.header&&(_=t.header),Array.isArray(t.columns)){if(0===t.columns.length)throw new Error("Option columns is empty");r=t.columns}void 0!==t.escapeChar&&(a=t.escapeChar+s),t.escapeFormulae instanceof RegExp?o=t.escapeFormulae:"boolean"==typeof t.escapeFormulae&&t.escapeFormulae&&(o=/^[=+\-@\t\r].*$/)}})(),new RegExp(P(s),"g"));"string"==typeof e&&(e=JSON.parse(e));if(Array.isArray(e)){if(!e.length||Array.isArray(e[0]))return u(null,e,i);if("object"==typeof e[0])return u(r||Object.keys(e[0]),e,i)}else if("object"==typeof e)return"string"==typeof e.data&&(e.data=JSON.parse(e.data)),Array.isArray(e.data)&&(e.fields||(e.fields=e.meta&&e.meta.fields||r),e.fields||(e.fields=Array.isArray(e.data[0])?e.fields:"object"==typeof e.data[0]?Object.keys(e.data[0]):[]),Array.isArray(e.data[0])||"object"==typeof e.data[0]||(e.data=[e.data])),u(e.fields||[],e.data||[],i);throw new Error("Unable to serialize unrecognized input");function u(e,t,i){var r="",n=("string"==typeof e&&(e=JSON.parse(e)),"string"==typeof t&&(t=JSON.parse(t)),Array.isArray(e)&&0<e.length),s=!Array.isArray(t[0]);if(n&&_){for(var a=0;a<e.length;a++)0<a&&(r+=m),r+=k(e[a],a);0<t.length&&(r+=y)}for(var o=0;o<t.length;o++){var h=(n?e:t[o]).length,u=!1,d=n?0===Object.keys(t[o]).length:0===t[o].length;if(i&&!n&&(u="greedy"===i?""===t[o].join("").trim():1===t[o].length&&0===t[o][0].length),"greedy"===i&&n){for(var f=[],l=0;l<h;l++){var c=s?e[l]:l;f.push(t[o][c])}u=""===f.join("").trim()}if(!u){for(var p=0;p<h;p++){0<p&&!d&&(r+=m);var g=n&&s?e[p]:p;r+=k(t[o][g],p)}o<t.length-1&&(!i||0<h&&!d)&&(r+=y)}}return r}function k(e,t){var i,r;return null==e?"":e.constructor===Date?JSON.stringify(e).slice(1,25):(r=!1,o&&"string"==typeof e&&o.test(e)&&(e="'"+e,r=!0),i=e.toString().replace(h,a),(r=r||!0===n||"function"==typeof n&&n(e,t)||Array.isArray(n)&&n[t]||((e,t)=>{for(var i=0;i<t.length;i++)if(-1<e.indexOf(t[i]))return!0;return!1})(i,v.BAD_DELIMITERS)||-1<i.indexOf(m)||" "===i.charAt(0)||" "===i.charAt(i.length-1))?s+i+s:i)}},v.RECORD_SEP=String.fromCharCode(30),v.UNIT_SEP=String.fromCharCode(31),v.BYTE_ORDER_MARK="\ufeff",v.BAD_DELIMITERS=["\r","\n",'"',v.BYTE_ORDER_MARK],v.WORKERS_SUPPORTED=!s&&!!n.Worker,v.NODE_STREAM_INPUT=1,v.LocalChunkSize=10485760,v.RemoteChunkSize=5242880,v.DefaultDelimiter=",",v.Parser=E,v.ParserHandle=i,v.NetworkStreamer=f,v.FileStreamer=l,v.StringStreamer=c,v.ReadableStreamStreamer=p,n.jQuery&&((d=n.jQuery).fn.parse=function(o){var i=o.config||{},h=[];return this.each(function(e){if(!("INPUT"===d(this).prop("tagName").toUpperCase()&&"file"===d(this).attr("type").toLowerCase()&&n.FileReader)||!this.files||0===this.files.length)return!0;for(var t=0;t<this.files.length;t++)h.push({file:this.files[t],inputElem:this,instanceConfig:d.extend({},i)})}),e(),this;function e(){if(0===h.length)U(o.complete)&&o.complete();else{var e,t,i,r,n=h[0];if(U(o.before)){var s=o.before(n.file,n.inputElem);if("object"==typeof s){if("abort"===s.action)return e="AbortError",t=n.file,i=n.inputElem,r=s.reason,void(U(o.error)&&o.error({name:e},t,i,r));if("skip"===s.action)return void u();"object"==typeof s.config&&(n.instanceConfig=d.extend(n.instanceConfig,s.config))}else if("skip"===s)return void u()}var a=n.instanceConfig.complete;n.instanceConfig.complete=function(e){U(a)&&a(e,n.file,n.inputElem),u()},v.parse(n.file,n.instanceConfig)}}function u(){h.splice(0,1),e()}}),a&&(n.onmessage=function(e){e=e.data;void 0===v.WORKER_ID&&e&&(v.WORKER_ID=e.workerId);"string"==typeof e.input?n.postMessage({workerId:v.WORKER_ID,results:v.parse(e.input,e.config),finished:!0}):(n.File&&e.input instanceof File||e.input instanceof Object)&&(e=v.parse(e.input,e.config))&&n.postMessage({workerId:v.WORKER_ID,results:e,finished:!0})}),(f.prototype=Object.create(u.prototype)).constructor=f,(l.prototype=Object.create(u.prototype)).constructor=l,(c.prototype=Object.create(c.prototype)).constructor=c,(p.prototype=Object.create(u.prototype)).constructor=p,v});
+</script>
+<script>
+// ─── PatchBoard ───────────────────────────────────────────────────────────────
+// Author  : Jolan
+// Version : 2.0
+// License : MIT
+// Repo    : https://github.com/PercyaDJ/PatchBoard
+//
+// Zero-install, single-file dashboard for EPO and WSUS CSV report consolidation.
+// Drop your CSV exports, get anomalies and mail actions instantly — no server, no deps.
+// Works with any organization prefix. Adapt NAMING_CONVENTION.md to your own file pattern.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const WCOLS = ['Not Installed','Critical','Security','Failed','Pending Reboot'];
+const WCOL_LABELS = {'Not Installed':'Non inst.','Critical':'Critique','Security':'Sécurité','Failed':'Échec','Pending Reboot':'Reboot'};
+const WCOL_FILTER = {'Not Installed':'Non installé','Critical':'Critique','Security':'Sécurité','Failed':'Échec','Pending Reboot':'Reboot en attente'};
+const WCOL_CLASS  = {'Not Installed':'ni','Critical':'nc','Security':'ns','Failed':'nf','Pending Reboot':'np'};
+
+const W_WORDING = {
+  'Not Installed':(p,v)=>`${v} mise${v>1?'s':''} à jour non installée${v>1?'s':''} ${v>1?'ont été détectées':'a été détectée'} sur votre poste ${p}. Merci de procéder à leur installation dans les meilleurs délais.`,
+  'Critical':     (p,v)=>`${v} mise${v>1?'s':''} à jour critique${v>1?'s':''} ${v>1?'sont en attente':'est en attente'} sur votre poste ${p}. Ces mises à jour sont essentielles pour la sécurité. Merci d'y remédier en urgence.`,
+  'Security':     (p,v)=>`${v} mise${v>1?'s':''} à jour de sécurité ${v>1?'sont en attente':'est en attente'} sur votre poste ${p}. Merci de les installer dès que possible.`,
+  'Failed':       (p,v)=>`${v} mise${v>1?'s':''} à jour ${v>1?'ont échoué':'a échoué'} lors de leur installation sur votre poste ${p}. Merci de contacter le support ou de relancer manuellement les mises à jour.`,
+  'Pending Reboot':(p)=>`Votre poste ${p} nécessite un redémarrage pour finaliser l'installation de mises à jour. Merci de redémarrer votre machine dès que possible.`,
+};
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const S = {wsusData:[],epoData:[],loadedFiles:[],siteFilter:'ALL',alertFilter:'ALL',tab:'alerts',search:''};
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function parseFn(name){
+  // Pattern structuré : [PREFIXE]-Reporting-(WSUS|EPO)-Site-[CODE]
+  // Le préfixe est ignoré — fonctionne avec n'importe quelle organisation.
+  const m=name.match(/[^\\/-]*Reporting-(WSUS|EPO)-Site-([A-Z0-9]{2,6})/i);
+  if(m)return{type:m[1].toUpperCase(),site:m[2].toUpperCase()};
+
+  // Fallback permissif : WSUS ou EPO présent dans le nom + code site optionnel
+  const typeM=name.match(/\b(WSUS|EPO)\b/i);
+  const siteM=name.match(/[Ss]ite[-_]([A-Z0-9]{2,6})/i);
+  if(typeM)return{type:typeM[1].toUpperCase(),site:siteM?siteM[1].toUpperCase():'SITE'};
+
+  return null;
+}
+function wsusIssues(row){
+  return WCOLS.map(c=>({col:c,val:parseInt(row[c],10)})).filter(({val})=>!isNaN(val)&&val>0);
+}
+function epoStatus(row){
+  const s=String(row['Status']||'').trim().toLowerCase();
+  // Valeurs exactes observées dans les exports
+  if(s==='antivirus ok')return'ok';
+  if(s==='antivirus nok')return'nok';
+  if(s==='antivirus ko')return'ko';
+  // Autres préfixes possibles selon le site
+  if(s.endsWith(' ok'))return'ok';
+  if(s.endsWith(' nok'))return'nok';
+  if(s.endsWith(' ko'))return'ko';
+  return null;
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function getSites(){
+  return['ALL',...[...new Set([...S.wsusData,...S.epoData].map(r=>r._site).filter(Boolean))].sort()];
+}
+function matchSearch(poste,user){
+  const q=S.search.toLowerCase().trim();
+  if(!q)return true;
+  return String(poste||'').toLowerCase().includes(q)||String(user||'').toLowerCase().includes(q);
+}
+
+// ─── JOINTURE PAR POSTE ──────────────────────────────────────────────────────
+// Retourne une liste de lignes consolidées, une par poste en anomalie.
+// Chaque ligne a : poste, user, site, wsusRow (ou null), epoRow (ou null)
+function buildMerged(){
+  // Index WSUS par nom de poste normalisé
+  const wsusIdx={};
+  for(const r of S.wsusData){
+    const key=(String(r['Poste']||'')).toUpperCase().trim();
+    if(key)wsusIdx[key]=r;
+  }
+  // Index EPO par nom de poste normalisé
+  const epoIdx={};
+  for(const r of S.epoData){
+    const key=(String(r['Poste']||'')).toUpperCase().trim();
+    if(key)epoIdx[key]=r;
+  }
+
+  // Union des clés
+  const allKeys=new Set([...Object.keys(wsusIdx),...Object.keys(epoIdx)]);
+  const rows=[];
+
+  for(const key of allKeys){
+    const w=wsusIdx[key]||null;
+    const e=epoIdx[key]||null;
+
+    const hasWsusAlert = w && wsusIssues(w).length>0;
+    const hasEpoAlert  = e && epoStatus(e)!=='ok' && epoStatus(e)!==null;
+
+    if(!hasWsusAlert&&!hasEpoAlert)continue;
+
+    // Filtrage site
+    const site=(w||e)._site;
+    if(S.siteFilter!=='ALL'&&site!==S.siteFilter)continue;
+
+    // Filtrage type anomalie (uniquement WSUS cols)
+    if(S.alertFilter!=='ALL'){
+      if(!w)continue;
+      const iss=wsusIssues(w);
+      if(!iss.some(i=>i.col===S.alertFilter))continue;
+    }
+
+    const poste=(w||e)['Poste']||key;
+    const user =(w||e)['User']||'';
+    if(!matchSearch(poste,user))continue;
+
+    rows.push({poste,user,site,w,e,hasWsusAlert,hasEpoAlert});
+  }
+  return rows;
+}
+
+// ─── MAILTO CONSOLIDÉ ────────────────────────────────────────────────────────
+function buildMailto(merged){
+  const {poste,user,w,e,hasWsusAlert,hasEpoAlert}=merged;
+  const sub='[SECURITE] Action requise - Poste '+poste;
+
+  const lines=[];
+
+  if(hasEpoAlert&&e){
+    const st=String(e['Status']||'');
+    if(st.toUpperCase()==='NOK'){
+      lines.push(`  - Une anomalie a été détectée sur la protection antivirus (Endpoint Security) de votre poste. Le statut actuel est : ${st}. Merci de vérifier que l'antivirus est bien actif et à jour, et de contacter le support si le problème persiste.`);
+    } else {
+      lines.push(`  - L'antivirus de votre poste est dans un état non conforme (${st}). Merci de contacter immédiatement l'équipe SSI pour régulariser la situation.`);
+    }
+  }
+
+  if(hasWsusAlert&&w){
+    const iss=wsusIssues(w);
+    for(const {col,val} of iss){
+      lines.push('  - '+W_WORDING[col](poste,val));
+    }
+  }
+
+  const body=[
+    'Bonjour,','',
+    'Nous vous contactons au sujet de votre poste de travail : '+poste+'.',
+    '','Les anomalies suivantes ont été détectées lors de notre contrôle hebdomadaire :','',
+    ...lines,'',
+    'Merci de prendre en compte ces actions dans les meilleurs délais.',
+    "En cas de difficulté, n'hésitez pas à contacter l'équipe SSI.",
+    '','Cordialement,',"L'équipe Sécurité des Systèmes d'Information",
+  ].join('\n');
+
+  return'mailto:'+user+'?subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body);
+}
+
+// ─── HTML BUILDERS ───────────────────────────────────────────────────────────
+function hKpis(wsusFiltered,epoFiltered,merged,tab){
+  let k=[];
+
+  if(tab==='alerts'){
+    // KPI généraux : vue Codir / CoSite
+    const totalPostes=new Set([...wsusFiltered.map(r=>String(r['Poste']||'').toUpperCase()),...epoFiltered.map(r=>String(r['Poste']||'').toUpperCase())]).size;
+    const wsusAnomaly=merged.filter(m=>m.hasWsusAlert).length;
+    const epoAnomaly =merged.filter(m=>m.hasEpoAlert).length;
+    const both       =merged.filter(m=>m.hasWsusAlert&&m.hasEpoAlert).length;
+    k=[
+      {l:'Postes en anomalie',       v:merged.length, c:'#f87171', s:totalPostes?`sur ${totalPostes} postes surveillés`:''},
+      {l:'Anomalies WSUS',           v:wsusAnomaly,   c:'#60a5fa', s:wsusFiltered.length?((wsusAnomaly/wsusFiltered.length)*100).toFixed(0)+'% du parc':''},
+      {l:'Anomalies EPO (antivirus)',v:epoAnomaly,    c:'#c084fc', s:epoFiltered.length?((epoAnomaly/epoFiltered.length)*100).toFixed(0)+'% du parc':''},
+      {l:'Double anomalie EPO+WSUS', v:both,           c:'#fb923c', s:both>0?'postes à traiter en priorité':''},
+    ];
+  } else if(tab==='wsus'){
+    const nc =wsusFiltered.filter(r=>wsusIssues(r).length>0).length;
+    const cr =wsusFiltered.filter(r=>parseInt(r['Critical'],10)>0).length;
+    const rb =wsusFiltered.filter(r=>parseInt(r['Pending Reboot'],10)>0).length;
+    const fa =wsusFiltered.filter(r=>parseInt(r['Failed'],10)>0).length;
+    const pct=wsusFiltered.length?((nc/wsusFiltered.length)*100).toFixed(0):0;
+    k=[
+      {l:'Postes WSUS analysés',     v:wsusFiltered.length, c:'#60a5fa', s:''},
+      {l:'Non conformes',            v:nc,                  c:'#fbbf24', s:wsusFiltered.length?pct+'% du parc':''},
+      {l:'Patchs critiques en attente',v:cr,                c:'#f87171', s:''},
+      {l:'Reboot en attente',        v:rb,                  c:'#38bdf8', s:fa?`${fa} échec${fa>1?'s':''} d'installation`:''},
+    ];
+  } else if(tab==='epo'){
+    const ok  =epoFiltered.filter(r=>epoStatus(r)==='ok').length;
+    const nok =epoFiltered.filter(r=>epoStatus(r)==='nok').length;
+    const ko  =epoFiltered.filter(r=>epoStatus(r)==='ko').length;
+    const nd  =epoFiltered.filter(r=>epoStatus(r)===null).length;
+    const pctOk=epoFiltered.length?((ok/epoFiltered.length)*100).toFixed(0):0;
+    k=[
+      {l:'Postes EPO analysés',      v:epoFiltered.length, c:'#60a5fa', s:''},
+      {l:'Antivirus OK',             v:ok,                 c:'#4ade80', s:epoFiltered.length?pctOk+'% du parc':''},
+      {l:'Antivirus NOK',            v:nok,                c:'#fbbf24', s:'anomalie à corriger'},
+      {l:'Antivirus KO',             v:ko,                 c:'#f87171', s:nd?`${nd} statut${nd>1?'s':''} inconnu${nd>1?'s':''}`:''},
+    ];
+  }
+
+  return`<div class="kpi-grid">${k.map(x=>`<div class="kpi" style="border-left:3px solid ${x.c}"><div class="kpi-label">${x.l}</div><div class="kpi-value" style="color:${x.c}">${x.v}</div>${x.s?`<div class="kpi-sub">${x.s}</div>`:''}</div>`).join('')}</div>`;
+}
+
+function hFilters(){
+  const so=getSites().map(s=>`<option value="${s}"${S.siteFilter===s?' selected':''}>${s==='ALL'?'Tous les sites':'Site - '+s}</option>`).join('');
+  const ao=`<option value="ALL"${S.alertFilter==='ALL'?' selected':''}>Toutes les anomalies</option>`
+    +WCOLS.map(c=>`<option value="${c}"${S.alertFilter===c?' selected':''}>${WCOL_FILTER[c]}</option>`).join('');
+  return`<div class="filters">
+    <select onchange="set('siteFilter',this.value)">${so}</select>
+    <select onchange="set('alertFilter',this.value)">${ao}</select>
+    <input id="search-input" type="text" placeholder="Rechercher un poste ou un GID..." value="${esc(S.search)}" oninput="onSearch(this.value)">
+  </div>`;
+}
+
+function hTabs(ca,cw,ce){
+  return`<div class="tabs">
+    <button class="tab${S.tab==='alerts'?' ta':''}" onclick="set('tab','alerts')">Anomalies <span class="tc" style="color:${S.tab==='alerts'?'#ef4444':'var(--dim)'};background:${S.tab==='alerts'?'#ef444422':'transparent'}">${ca}</span></button>
+    <button class="tab${S.tab==='wsus'?' tw':''}" onclick="set('tab','wsus')">WSUS complet <span class="tc" style="color:${S.tab==='wsus'?'#60a5fa':'var(--dim)'};background:${S.tab==='wsus'?'#60a5fa22':'transparent'}">${cw}</span></button>
+    <button class="tab${S.tab==='epo'?' te':''}" onclick="set('tab','epo')">EPO <span class="tc" style="color:${S.tab==='epo'?'#4ade80':'var(--dim)'};background:${S.tab==='epo'?'#4ade8022':'transparent'}">${ce}</span></button>
+  </div>`;
+}
+
+function hNumCell(col,val,addSep){
+  const sep=addSep?'col-sep':'';
+  if(isNaN(val)||val===0)return`<td class="${sep}"><span class="n0">0</span></td>`;
+  return`<td class="${sep}"><span class="bdg ${WCOL_CLASS[col]}">${val}</span></td>`;
+}
+
+function hEpoCell(epoRow,addSep){
+  const sep=addSep?'col-sep':'';
+  if(!epoRow)return`<td class="${sep}"><span class="bdg bst-nd">N/A</span></td>`;
+  const st=epoStatus(epoRow);
+  const cls=st==='ok'?'bst-ok':st==='nok'?'bst-nok':'bst-ko';
+  return`<td class="${sep}"><span class="bdg ${cls}">${esc(epoRow['Status']||'-')}</span></td>`;
+}
+
+// Table anomalies : UNE seule table, UNE ligne par poste, UN bouton mail
+function hAlerts(mergedRows){
+  if(!mergedRows.length)return`<div class="empty">Aucune anomalie détectée avec les filtres actuels.</div>`;
+
+  // En-têtes avec séparation visuelle entre groupes EPO / WSUS
+  const head=`<thead><tr>
+    <th>Site</th>
+    <th>Poste</th>
+    <th>Utilisateur</th>
+    <th>Sources</th>
+    <th class="th-epo col-sep">Antivirus</th>
+    ${WCOLS.map((c,i)=>`<th class="th-wsus${i===0?' col-sep':''}">${WCOL_LABELS[c]}</th>`).join('')}
+    <th class="col-sep">Action</th>
+  </tr></thead>`;
+
+  const body=mergedRows.map(m=>{
+    const sources=`<div class="src">${m.hasEpoAlert?'<span class="src-e">EPO</span>':''}${m.hasWsusAlert?'<span class="src-w">WSUS</span>':''}</div>`;
+    const wVals=WCOLS.map((c,i)=>{
+      const val=m.w?parseInt(m.w[c],10):NaN;
+      return hNumCell(c,val,i===0);
+    }).join('');
+    return`<tr>
+      <td><span class="bdg bs-w">${esc(m.site)}</span></td>
+      <td class="mono sm" style="color:#cbd5e1">${esc(m.poste)}</td>
+      <td class="mono muted sm">${esc(m.user)}</td>
+      <td>${sources}</td>
+      ${hEpoCell(m.e,true)}
+      ${wVals}
+      <td class="col-sep"><a class="btn-mail" href="${buildMailto(m)}">Envoyer mail</a></td>
+    </tr>`;
+  }).join('');
+
+  return`<div class="wrap"><table>${head}<tbody>${body}</tbody></table></div>`;
+}
+
+function hWsus(rows){
+  if(!rows.length)return`<div class="empty">Aucune ligne ne correspond aux filtres.</div>`;
+  const ths=['Site','Poste','Utilisateur','OS',...WCOLS.map(c=>WCOL_LABELS[c]),'Dernière sync'].map(h=>`<th>${h}</th>`).join('');
+  const trs=rows.map(row=>{
+    const os=String(row['Operating System']||'').replace('Microsoft Windows ','Win ');
+    return`<tr>
+      <td><span class="bdg bs-w">${esc(row._site)}</span></td>
+      <td class="mono sm" style="color:#cbd5e1">${esc(row['Poste'])}</td>
+      <td class="mono muted sm">${esc(row['User'])}</td>
+      <td class="dim sm">${esc(os)}</td>
+      ${WCOLS.map(c=>hNumCell(c,parseInt(row[c],10),false)).join('')}
+      <td class="dim sm mono">${esc(row['Last Sync Time'])}</td></tr>`;
+  }).join('');
+  return`<div class="wrap"><table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
+}
+
+function hEpoTable(rows){
+  if(!rows.length)return`<div class="empty">Aucune donnée EPO chargée.</div>`;
+  const ths=['Site','Poste','Status','Dernier contact','EP Threat Prevention','Agent','Type','Utilisateur','Action'].map(h=>`<th>${h}</th>`).join('');
+  const trs=rows.map(row=>{
+    const st=epoStatus(row);
+    const isAlert=st!=='ok'&&st!==null;
+    const cls=st==='ok'?'bst-ok':st==='nok'?'bst-nok':st==='ko'?'bst-ko':'bst-nd';
+    const ml=isAlert?('mailto:'+row['User']+'?subject='+encodeURIComponent('[SECURITE] Action requise - Poste '+row['Poste']+' (antivirus)')+'&body='+encodeURIComponent(
+      ['Bonjour,','','Nous vous contactons au sujet de votre poste de travail : '+row['Poste']+'.',
+      '',`Le statut de l'antivirus Endpoint Security sur votre poste est actuellement : ${row['Status']}.`,'',
+      st==='nok'?"Une anomalie a été détectée sur la protection antivirus. Merci de vérifier que l'antivirus est bien actif et à jour."
+               :"L'antivirus de votre poste est dans un état non conforme (KO). Merci de contacter immédiatement l'équipe SSI.",
+      '','Merci de prendre en compte cette action dans les meilleurs délais.',
+      "En cas de difficulté, n'hésitez pas à contacter l'équipe SSI.",
+      '','Cordialement',"L'équipe Sécurité des Systèmes d'Information"].join('\n')
+    )):'';
+    return`<tr>
+      <td><span class="bdg bs-e">${esc(row._site)}</span></td>
+      <td class="mono sm" style="color:#cbd5e1">${esc(row['Poste'])}</td>
+      <td><span class="bdg ${cls}">${esc(row['Status']||'-')}</span></td>
+      <td class="dim sm mono">${esc(row['Last Contact'])}</td>
+      <td class="muted sm">${esc(row['Endpoint Security Threat Prevention'])}</td>
+      <td class="muted sm">${esc(row['Agent'])}</td>
+      <td class="muted">${esc(row['Type'])}</td>
+      <td class="mono muted sm">${esc(row['User'])}</td>
+      <td>${ml?`<a class="btn-mail" href="${ml}">Envoyer mail</a>`:''}</td></tr>`;
+  }).join('');
+  return`<div class="wrap"><table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
+}
+
+function hChips(){
+  if(!S.loadedFiles.length)return'';
+  return`<div class="chips">${S.loadedFiles.map(f=>{
+    if(f.status==='err')return`<div class="chip chip-err">${esc(f.name.substring(0,30))}... erreur</div>`;
+    const tc=f.type==='WSUS'?'tw':'te',cc=f.type==='WSUS'?'chip-wsus':'chip-epo';
+    return`<div class="chip ${cc}"><span class="${tc}">${f.type}</span> ${f.site} <span class="tn">(${f.n})</span></div>`;
+  }).join('')}</div>`;
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function render(){
+  const siteW  = S.wsusData.filter(r=>S.siteFilter==='ALL'||r._site===S.siteFilter);
+  const siteE  = S.epoData.filter(r=>S.siteFilter==='ALL'||r._site===S.siteFilter);
+  const merged = buildMerged();
+  const allW   = S.wsusData.filter(r=>{
+    if(S.siteFilter!=='ALL'&&r._site!==S.siteFilter)return false;
+    return matchSearch(r['Poste'],r['User']);
+  });
+  const allE   = S.epoData.filter(r=>{
+    if(S.siteFilter!=='ALL'&&r._site!==S.siteFilter)return false;
+    return matchSearch(r['Poste'],r['User']);
+  });
+  const hasData=S.wsusData.length>0||S.epoData.length>0;
+  const date   =new Date().toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  let table='';
+  if(S.tab==='alerts')table=hAlerts(merged);
+  else if(S.tab==='wsus')table=hWsus(allW);
+  else table=hEpoTable(allE);
+
+  // Sauvegarde curseur
+  const si=document.getElementById('search-input');
+  const ss=si?si.selectionStart:null,se=si?si.selectionEnd:null;
+
+  document.getElementById('app').innerHTML=`
+    <div class="header">
+      <div class="header-left">
+        <div class="title-row">
+          <div class="bars">
+            <div class="bar" style="background:#2563eb"></div>
+            <div class="bar" style="background:#10b981"></div>
+          </div>
+          <h1>PatchBoard</h1>
+        </div>
+        <div class="sub">Consolidation EPO + WSUS &bull; ${date}</div>
+      </div>
+      ${S.loadedFiles.length?`<button class="btn-reset" onclick="resetAll()">Réinitialiser</button>`:''}
+    </div>
+    <div class="dropzone" id="dz" onclick="document.getElementById('fi').click()">
+      <input id="fi" type="file" multiple accept=".csv" style="display:none" onchange="loadFiles(this.files);this.value='';">
+      <p>Déposez vos fichiers CSV ici ou cliquez pour sélectionner<br>
+        <code>[PREFIX]-Reporting-EPO-Site-XXX_*.csv &nbsp;&bull;&nbsp; [PREFIX]-Reporting-WSUS-Site-XXX_*.csv</code>
+      </p>
+    </div>
+    ${hChips()}
+    ${hasData?hKpis(siteW,siteE,merged,S.tab):''}
+    ${hasData?hFilters():''}
+    ${hasData?hTabs(merged.length,allW.length,allE.length):''}
+    ${hasData?table:''}
+    ${!hasData&&!S.loadedFiles.length?`<div class="empty-state"><p>Aucun fichier chargé. Déposez vos exports CSV pour commencer.</p></div>`:''}
+    ${hasData?`<div class="footer">${S.wsusData.length} postes WSUS &bull; ${S.epoData.length} postes EPO &bull; ${S.loadedFiles.length} fichiers chargés</div>`:''}
+  `;
+
+  // Restaure focus/curseur
+  const ni=document.getElementById('search-input');
+  if(ni&&ss!==null){ni.focus();try{ni.setSelectionRange(ss,se);}catch(e){}}
+
+  const dz=document.getElementById('dz');
+  if(dz){
+    dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+    dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+    dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');loadFiles(e.dataTransfer.files);});
+  }
+}
+
+// ─── ACTIONS ─────────────────────────────────────────────────────────────────
+function set(k,v){S[k]=v;render();}
+function onSearch(v){S.search=v;render();}
+function resetAll(){
+  S.wsusData=[];S.epoData=[];S.loadedFiles=[];
+  S.siteFilter='ALL';S.alertFilter='ALL';S.search='';S.tab='alerts';
+  render();
+}
+function loadFiles(files){
+  const arr=Array.from(files);let pending=arr.length;if(!pending)return;
+  arr.forEach(file=>{
+    const meta=parseFn(file.name);
+    if(!meta){S.loadedFiles.push({name:file.name,status:'err'});if(--pending===0)render();return;}
+    Papa.parse(file,{
+      header:true,skipEmptyLines:true,
+      complete({data}){
+        const rows=data.map(r=>({...r,_site:meta.site}));
+        if(meta.type==='WSUS')S.wsusData.push(...rows);
+        else S.epoData.push(...rows);
+        S.loadedFiles.push({name:file.name,type:meta.type,site:meta.site,n:data.length,status:'ok'});
+        if(--pending===0)render();
+      },
+      error(){S.loadedFiles.push({name:file.name,status:'err'});if(--pending===0)render();}
+    });
+  });
+}
+
+render();
+</script>
+</body>
+</html>
