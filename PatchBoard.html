@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PatchBoard</title>
-<meta name="author" content="Jolan">
+<meta name="author" content="Jolan D. — github.com/PercyaDJ">
 <meta name="description" content="PatchBoard — Zero-install HTML dashboard for EPO and WSUS CSV report consolidation. No server, no dependencies.">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -116,10 +116,12 @@ License: MIT
 </script>
 <script>
 // ─── PatchBoard ───────────────────────────────────────────────────────────────
-// Author  : Jolan
+// Auteur  : Jolan D. (PercyaDJ)
 // Version : 2.0
-// License : MIT
-// Repo    : https://github.com/PercyaDJ/PatchBoard
+// Licence : MIT — Copyright © 2026 Jolan D. Tous droits réservés.
+//           Redistribution autorisée avec mention obligatoire de l'auteur original.
+//           Usage commercial interdit sans accord explicite de l'auteur.
+// Dépôt   : https://github.com/PercyaDJ/PatchBoard
 //
 // Zero-install, single-file dashboard for EPO and WSUS CSV report consolidation.
 // Drop your CSV exports, get anomalies and mail actions instantly — no server, no deps.
@@ -488,6 +490,7 @@ function render(){
     ${hasData?table:''}
     ${!hasData&&!S.loadedFiles.length?`<div class="empty-state"><p>Aucun fichier chargé. Déposez vos exports CSV pour commencer.</p></div>`:''}
     ${hasData?`<div class="footer">${S.wsusData.length} postes WSUS &bull; ${S.epoData.length} postes EPO &bull; ${S.loadedFiles.length} fichiers chargés</div>`:''}
+    <div class="footer" style="margin-top:4px">PatchBoard &copy; 2026 <a href="https://github.com/PercyaDJ/PatchBoard" target="_blank" style="color:var(--dim);text-decoration:none;">Jolan D.</a> &bull; MIT License</div>
   `;
 
   // Restaure focus/curseur

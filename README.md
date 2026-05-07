@@ -124,4 +124,4 @@ PatchBoard/
 
 MIT — see [LICENSE](LICENSE).
 
-© 2026 Jolan ([PercyaDJ](https://github.com/PercyaDJ))
+© 2026 Jolan D. ([PercyaDJ](https://github.com/PercyaDJ))
